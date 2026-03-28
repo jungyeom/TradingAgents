@@ -95,7 +95,8 @@ class GraphSetup:
         research_manager_node = create_research_manager(
             self.deep_thinking_llm, self.invest_judge_memory
         )
-        trader_node = create_trader(self.quick_thinking_llm, self.trader_memory)
+        # Use deep_thinking_llm for the trader (higher reasoning quality per spec)
+        trader_node = create_trader(self.deep_thinking_llm, self.trader_memory)
 
         # Create risk analysis nodes
         aggressive_analyst = create_aggressive_debator(self.quick_thinking_llm)

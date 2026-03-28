@@ -53,6 +53,10 @@ class AgentState(MessagesState):
 
     sender: Annotated[str, "Agent that sent this message"]
 
+    # Context injected by the runner (auto-trader custom fields)
+    portfolio_context: Annotated[str, "Current portfolio state injected by the runner"]
+    existing_thesis: Annotated[str, "Stored thesis for existing position (thesis invalidation check)"]
+
     # research step
     market_report: Annotated[str, "Report from the Market Analyst"]
     sentiment_report: Annotated[str, "Report from the Social Media Analyst"]

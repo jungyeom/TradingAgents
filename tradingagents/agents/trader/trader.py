@@ -1,6 +1,4 @@
 import functools
-import time
-import json
 
 from tradingagents.agents.utils.agent_utils import build_instrument_context
 
@@ -15,6 +13,10 @@ def create_trader(llm, memory):
         news_report = state["news_report"]
         fundamentals_report = state["fundamentals_report"]
 
+        # auto-trader context injected by runner
+        portfolio_context = state.get("portfolio_context", "")
+        existing_thesis = state.get("existing_thesis", "")
+
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
 
@@ -25,15 +27,47 @@ def create_trader(llm, memory):
         else:
             past_memory_str = "No past memories found."
 
+        # Optional portfolio context block
+        portfolio_section = ""
+        if portfolio_context:
+            portfolio_section = f"\n\n**CURRENT PORTFOLIO CONTEXT:**\n{portfolio_context}"
+
+        # Optional thesis invalidation block (only for existing positions)
+        thesis_section = ""
+        if existing_thesis:
+            thesis_section = (
+                f"\n\n**EXISTING POSITION — THESIS INVALIDATION CHECK:**\n"
+                f"This ticker is an EXISTING position in the portfolio. The original buy thesis was:\n"
+                f"{existing_thesis}\n"
+                f"Carefully evaluate whether this thesis is still intact or has been invalidated by new evidence. "
+                f"If invalidated, recommend sell."
+            )
+
         context = {
             "role": "user",
-            "content": f"Based on a comprehensive analysis by a team of analysts, here is an investment plan tailored for {company_name}. {instrument_context} This plan incorporates insights from current technical market trends, macroeconomic indicators, and social media sentiment. Use this plan as a foundation for evaluating your next trading decision.\n\nProposed Investment Plan: {investment_plan}\n\nLeverage these insights to make an informed and strategic decision.",
+            "content": (
+                f"Comprehensive analysis for {company_name}: {instrument_context}\n\n"
+                f"Research team investment plan: {investment_plan}"
+                f"{portfolio_section}"
+                f"{thesis_section}"
+                f"\n\nMake your final trading decision."
+            ),
         }
 
         messages = [
             {
                 "role": "system",
-                "content": f"""You are a trading agent analyzing market data to make investment decisions. Based on your analysis, provide a specific recommendation to buy, sell, or hold. End with a firm decision and always conclude your response with 'FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**' to confirm your recommendation. Apply lessons from past decisions to strengthen your analysis. Here are reflections from similar situations you traded in and the lessons learned: {past_memory_str}""",
+                "content": (
+                    f"You are a trading agent making a final investment decision. "
+                    f"Apply lessons from past decisions. Past reflections:\n{past_memory_str}\n\n"
+                    f"After your analysis, you MUST output your decision as a JSON block "
+                    f"wrapped in ```json ... ```. The JSON must have exactly these fields:\n"
+                    f'{{"action": "buy|sell|hold", '
+                    f'"conviction": <float 0.0-1.0>, '
+                    f'"thesis": "<one concise sentence stating the investment thesis>", '
+                    f'"invalidation_conditions": ["<condition that would make you change your mind>", ...], '
+                    f'"reasoning": "<brief explanation of your decision>"}}'
+                ),
             },
             context,
         ]

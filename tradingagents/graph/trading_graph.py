@@ -191,14 +191,24 @@ class TradingAgentsGraph:
             ),
         }
 
-    def propagate(self, company_name, trade_date):
-        """Run the trading agents graph for a company on a specific date."""
+    def propagate(self, company_name, trade_date, portfolio_context="", existing_thesis=""):
+        """Run the trading agents graph for a company on a specific date.
 
+        Args:
+            company_name: Ticker symbol (e.g. "NVDA")
+            trade_date: Date string (e.g. "2026-03-27")
+            portfolio_context: Current portfolio summary injected into the trader prompt.
+            existing_thesis: Original buy thesis for existing positions (triggers thesis
+                             invalidation check in the trader prompt).
+        """
         self.ticker = company_name
 
         # Initialize state
         init_agent_state = self.propagator.create_initial_state(
-            company_name, trade_date
+            company_name,
+            trade_date,
+            portfolio_context=portfolio_context,
+            existing_thesis=existing_thesis,
         )
         args = self.propagator.get_graph_args()
 
